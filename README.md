@@ -1,27 +1,42 @@
-# Weather App React
+# SkyCast Weather App (React + Vite)
 
-A simple and responsive weather application built with React and Vite.  
-It fetches real-time weather data from the OpenWeatherMap API and shows:
+A modern, responsive weather dashboard with multi-page navigation, smart city search, geolocation, air quality insights, and travel planning support.
 
-- City and country
-- Temperature (Celsius)
-- Weather condition and icon
-- Humidity
-- Wind speed
+## Features
 
-The UI background changes dynamically based on weather conditions (sunny, cloudy, rainy, storm, snow, default).
-
----
+- Header layout: logo -> navigation -> search/controls -> login/signup
+- Smart search with city suggestions and recent searches
+- Current location weather using browser geolocation
+- Voice search (supported browsers)
+- Dark/light mode toggle
+- Dynamic weather backgrounds (sunny, cloudy, rainy, storm, snow)
+- Home dashboard:
+  - current weather card
+  - hourly forecast strip
+  - 7-day forecast
+  - metrics (humidity, wind, pressure, AQI)
+  - map preview
+  - alert/AI-style weather tips
+- Dedicated pages:
+  - Home
+  - Forecast
+  - Radar
+  - Air Quality
+  - Compare Cities
+  - Travel Planner
+  - Analytics
+  - Dashboard (user-focused)
+  - Auth (login/signup UI)
 
 ## Tech Stack
 
 - React 18
 - Vite 5
 - JavaScript (ES modules)
-- OpenWeatherMap API
-- CSS (custom styling)
-
----
+- Custom CSS (glassmorphism UI)
+- OpenWeather API (primary)
+- Open-Meteo + Open-Meteo Air Quality APIs (fallback + extended forecast/air data)
+- OpenStreetMap embed (map preview)
 
 ## Project Structure
 
@@ -29,72 +44,61 @@ The UI background changes dynamically based on weather conditions (sunny, cloudy
 weather-app-react/
   src/
     api/
-      weatherApi.js       # API layer: URL building, config validation, error mapping
-    App.jsx               # Root UI composition
-    Weather.jsx           # Main weather UI + state management
-    Weather.css           # Component styles
-    index.css             # Global styles
-    main.jsx              # React entry point
-  env.example             # Environment variable template
-  vite.config.js          # Vite configuration
-  package.json            # Scripts and dependencies
+      weatherApi.js
+    components/
+      AppHeader.jsx
+      AppFooter.jsx
+    constants/
+      weatherBackgrounds.js
+    hooks/
+      useBackgroundRotation.js
+      useDashboardData.js
+    pages/
+      HomePage.jsx
+      ForecastPage.jsx
+      RadarPage.jsx
+      AirQualityPage.jsx
+      CompareCitiesPage.jsx
+      TravelPlannerPage.jsx
+      AnalyticsPage.jsx
+      DashboardPage.jsx
+      AuthPage.jsx
+    App.jsx
+    Weather.jsx
+    Weather.css
+    index.css
+    main.jsx
+  env.example
+  package.json
+  vite.config.js
 ```
 
----
+## Getting Started
 
-## How It Works
-
-1. App starts and `Weather` component loads.
-2. On initial render, app fetches default city weather (`Delhi`).
-3. User enters any city name and submits form.
-4. `Weather.jsx` calls API layer function `getCurrentWeather(cityName)`.
-5. API response is stored in state and shown in UI.
-6. If request fails (invalid city, key, server issue), user-friendly error is displayed.
-
----
-
-## API Layer
-
-`src/api/weatherApi.js` centralizes all API-related logic:
-
-- Reads env values (`VITE_OPENWEATHER_API_KEY`, optional `VITE_OPENWEATHER_API_BASE_URL`)
-- Builds request URL
-- Converts HTTP status codes into user-friendly errors:
-  - `401`: Invalid API key
-  - `404`: City not found
-  - `5xx`: Weather service unavailable
-- If API key is missing, app automatically uses a public fallback weather source so city search still works
-
-This keeps UI components clean and easier to maintain.
-
----
-
-## Setup Instructions
-
-### 1) Install dependencies
+### 1) Install
 
 ```bash
 npm install
 ```
 
-### 2) Configure environment variables
+### 2) Configure environment
 
-Create a `.env` file in the project root:
+Create `.env` in project root:
 
 ```env
 VITE_OPENWEATHER_API_KEY=your_openweathermap_api_key_here
 VITE_OPENWEATHER_API_BASE_URL=https://api.openweathermap.org/data/2.5/weather
 ```
 
-You can copy from `env.example`.
+If `VITE_OPENWEATHER_API_KEY` is missing, the app automatically falls back to public Open-Meteo endpoints for core weather flows.
 
-### 3) Run development server
+### 3) Run locally
 
 ```bash
 npm run dev
 ```
 
-### 4) Build for production
+### 4) Build production bundle
 
 ```bash
 npm run build
@@ -106,66 +110,14 @@ npm run build
 npm run preview
 ```
 
----
-
 ## Available Scripts
 
-- `npm run dev` - start local Vite dev server
-- `npm run build` - create production build in `dist/`
-- `npm run preview` - preview production build locally
+- `npm run dev` - start local dev server
+- `npm run build` - production build to `dist/`
+- `npm run preview` - preview built app locally
 
----
+## Notes
 
-## Common Issues and Fixes
-
-### 1) `404 (Not Found)` in browser
-
-Possible reasons:
-
-- Wrong route/asset path when opening build files directly
-- Invalid city name returned 404 from weather API
-
-Fix:
-
-- Use `npm run dev` or `npm run preview` instead of opening `dist/index.html` directly
-- Check Network tab to see whether 404 is from `/assets/...` or `api.openweathermap.org`
-- Verify city spelling
-
-### 2) `Invalid API key`
-
-Fix:
-
-- Ensure `.env` exists in project root
-- Set `VITE_OPENWEATHER_API_KEY` correctly
-- Restart dev server after editing `.env`
-
-### 3) Environment variables not loading
-
-Fix:
-
-- Variable names must start with `VITE_`
-- Restart Vite server after changing env values
-
----
-
-## Security Note
-
-- `.env` and `.env.local` are ignored in `.gitignore`
-- Never commit real API keys to public repositories
-
----
-
-## Future Improvements
-
-- Add 5-day forecast
-- Add geolocation ("Current location weather")
-- Add unit switch (Celsius/Fahrenheit)
-- Add debounce for search input
-- Add test coverage (unit + integration)
-
----
-
-## License
-
-This project is for learning and personal use.  
-Add your preferred license if you plan to distribute it publicly.
+- Voice search requires `SpeechRecognition` support (WebKit-based browsers usually work best).
+- Geolocation requires browser permission.
+- Do not commit real API keys.
