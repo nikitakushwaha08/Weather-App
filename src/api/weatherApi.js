@@ -9,6 +9,12 @@ function buildWeatherUrl(cityName) {
   return `${apiBaseUrl}?q=${encodeURIComponent(cityName)}&appid=${apiKey}&units=metric`;
 }
 
+function buildGeoLabel(place) {
+  if (!place) return "";
+  const parts = [place.name, place.admin1, place.country].filter(Boolean);
+  return parts.join(", ");
+}
+
 function parseApiError(responseStatus) {
   if (responseStatus === 401) {
     return "Invalid API key. Please check VITE_OPENWEATHER_API_KEY.";
@@ -60,6 +66,10 @@ function mapFallbackPayload(cityName, place, payload) {
 
   return {
     name: place?.name || cityName,
+    coord: {
+      lat: place?.latitude,
+      lon: place?.longitude
+    },
     sys: {
       country: place?.country_code || ""
     },
@@ -107,6 +117,119 @@ async function fetchFallbackWeather(cityName) {
 
   const forecastData = await forecastResponse.json();
   return mapFallbackPayload(cityName, place, forecastData);
+}
+
+async function geocodeCity(cityName, count = 6) {
+  const geocodingUrl = `${FALLBACK_GEO_API_URL}?name=${encodeURIComponent(
+    cityName
+  )}&count=${count}&language=en&format=json`;
+  const response = await fetch(geocodingUrl);
+  if (!response.ok) {
+    throw new Error("Unable to fetch location suggestions.");
+  }
+  const payload = await response.json();
+  return payload?.results || [];
+}
+
+function mapCurrentByCoordinates(place, payload) {
+  const current = payload?.current || {};
+  const weather = mapOpenMeteoCodeToWeather(current.weather_code);
+  return {
+    name: place?.name || "Current Location",
+    coord: {
+      lat: place?.latitude,
+      lon: place?.longitude
+    },
+    sys: {
+      country: place?.country_code || ""
+    },
+    main: {
+      temp: current.temperature_2m,
+      feels_like: current.apparent_temperature,
+      humidity: current.relative_humidity_2m,
+      pressure: current.pressure_msl
+    },
+    wind: {
+      speed: current.wind_speed_10m
+    },
+    visibility: current.visibility,
+    weather: [
+      {
+        main: weather.main,
+        description: weather.description,
+        icon: weather.icon
+      }
+    ]
+  };
+}
+
+export async function getWeatherByCoordinates(latitude, longitude, label = "") {
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    throw new Error("Invalid coordinates for current location.");
+  }
+
+  const forecastUrl = `${FALLBACK_FORECAST_API_URL}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,pressure_msl,wind_speed_10m,visibility,weather_code&wind_speed_unit=ms&timezone=auto`;
+  const response = await fetch(forecastUrl);
+  if (!response.ok) {
+    throw new Error("Unable to fetch weather for current location.");
+  }
+
+  const payload = await response.json();
+  const place = {
+    name: label || "Current Location",
+    latitude: lat,
+    longitude: lon,
+    country_code: ""
+  };
+  return mapCurrentByCoordinates(place, payload);
+}
+
+export async function getCitySuggestions(query, limit = 6) {
+  const cleaned = String(query || "").trim();
+  if (cleaned.length < 2) return [];
+  const results = await geocodeCity(cleaned, limit);
+  return results.map((place) => ({
+    id: `${place.latitude}-${place.longitude}-${place.id || place.name}`,
+    name: place.name,
+    label: buildGeoLabel(place),
+    latitude: place.latitude,
+    longitude: place.longitude
+  }));
+}
+
+export async function getDailyForecastByCoordinates(latitude, longitude, days = 7) {
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    throw new Error("Invalid coordinates for forecast.");
+  }
+
+  const url = `${FALLBACK_FORECAST_API_URL}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&forecast_days=${days}&timezone=auto`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Unable to fetch forecast data.");
+  }
+  return response.json();
+}
+
+export async function getCityForecast(cityName, days = 7) {
+  const places = await geocodeCity(cityName, 1);
+  const place = places[0];
+  if (!place) {
+    throw new Error("Destination not found.");
+  }
+  const forecast = await getDailyForecastByCoordinates(place.latitude, place.longitude, days);
+  return {
+    place: {
+      name: place.name,
+      country: place.country,
+      latitude: place.latitude,
+      longitude: place.longitude
+    },
+    forecast
+  };
 }
 
 export async function getCurrentWeather(cityName) {
